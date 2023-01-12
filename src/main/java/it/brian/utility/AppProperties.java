@@ -13,13 +13,13 @@ public class AppProperties {
 
     private static final Properties properties = new Properties();
 
-    private static final String OLD_DRIVE = "form.olddrive";
-    private static final String CURRENT_DRIVE = "form.currentdrive";
-    private static final String IDE_SETTINGS_FOLDER_PC = "form.idesettingsfolder.pc";
-    private static final String IDE_SETTINGS_FOLDER_USB = "form.idesettingsfolder.usb";
-    private static final String TASK = "form.task";
-    private static final String LAUNCH_IDE = "form.launchide";
-    private static final String PROJECT_PATH = "form.projectpath";
+    private static final String OLD_DRIVE = "drive.old";
+    private static final String CURRENT_DRIVE = "drve.current";
+    private static final String IDE_SETTINGS_FOLDER_PC = "ide.settings.pc";
+    private static final String IDE_SETTINGS_FOLDER_USB = "ide.settings.usb";
+    private static final String TASK = "app.task";
+    private static final String LAUNCH_IDE = "app.launchide";
+    private static final String PROJECT_PATH = "project";
 
 
     public static void setOldDrive(int oldDrive) {

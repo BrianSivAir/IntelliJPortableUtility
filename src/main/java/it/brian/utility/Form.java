@@ -127,7 +127,6 @@ public class Form extends JFrame {
                     case 3 -> copyManager.copyPcToUsb();
                 }
                 ////git
-                //TODO: Implement
                 Git git = new Git(gitExecutable.getText());
                 if (addProjectToTrustedCheckBox.isSelected()) {
                     git.addProjectToTrusted(projectPath.getText());
@@ -139,6 +138,7 @@ public class Form extends JFrame {
 
                 ////launch
                 if (launchIdeCheckBox.isSelected()) {
+                    //TODO: Implement
                     //...
                 }
             }
@@ -191,9 +191,9 @@ public class Form extends JFrame {
 
     private void refreshLaunchIdeCheckBox() {
         if (launchIdeCheckBox.isSelected()) {
-            launchPanel.setVisible(true);
+            launchPadding.setVisible(true);
         } else {
-            launchPanel.setVisible(false);
+            launchPadding.setVisible(false);
         }
     }
 
