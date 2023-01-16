@@ -316,7 +316,6 @@
                 <properties>
                   <model>
                     <item value="Select a task"/>
-                    <item value="Just refactor"/>
                     <item value="Refactor and copy from USB to PC"/>
                     <item value="Refactor and copy from PC to USB"/>
                   </model>

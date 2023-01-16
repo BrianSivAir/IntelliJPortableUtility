@@ -4,10 +4,16 @@ import com.formdev.flatlaf.FlatClientProperties;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
+import org.apache.commons.io.Charsets;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 public class Form extends JFrame {
@@ -47,16 +53,83 @@ public class Form extends JFrame {
         setVisible(true);
         setTitle("IntelliJ Portable Utility");
         pack();
-        setBounds(200, 200, getBounds().getSize().width, getBounds().getSize().height);
+        setLocation(150, 100);
         setResizable(false);
         getRootPane().setDefaultButton(execute);
         load();
-        refreshLaunchIdeCheckBox();
+        refreshAllCheckBox();
     }
 
     public Form() {
         init();
 
+        configureBrowseButtons();
+
+        execute.addActionListener(e -> {
+            //VALIDATION
+            if (validateThis()) {
+                //PERSISTENCE
+                persist();
+                //EXECUTION
+                ////copy
+                CopyManager copyManager = new CopyManager(ideSettingsFolderPc.getText(), ideSettingsFolderUsb.getText());
+                RefactorManager refactorManager = new RefactorManager(Util.getCurrentDrive());
+                switch (task.getSelectedIndex()) {
+                    case 1 -> {
+                        refactorManager.loadSettings(ideSettingsFolderUsb.getText());
+                        copyManager.copyUsbToPc();
+                    }
+                    case 2 -> {
+                        copyManager.copyPcToUsb();
+                        refactorManager.backupSettings(ideSettingsFolderUsb.getText());
+                    }
+                }
+                ////git
+                Git git = new Git(gitExecutable.getText());
+                if (addProjectToTrustedCheckBox.isSelected()) {
+                    git.addProjectToTrusted(projectPath.getText());
+                }
+
+                if (setProxySettingsCheckBox.isSelected()) {
+                    git.setProxySettings(host.getText(), username.getText(), password.getText());
+                }
+
+                ////launch
+                if (launchIdeCheckBox.isSelected()) {
+                    Util.startIdea(ideaExecutable.getText(), projectPath.getText());
+                }
+            }
+
+        });
+        cancel.addActionListener(e -> {
+            dispose();
+            System.exit(0);
+        });
+
+        openCmd.addActionListener(e -> {
+            if (Validator.isValidGitExecutable(gitExecutable.getText())) {
+                Git git = new Git(gitExecutable.getText());
+                git.openCmd();
+            } else {
+                JOptionPane.showMessageDialog(
+                        SwingUtilities.windowForComponent(Form.this),
+                        "Invalid git executable",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE,
+                        UIManager.getIcon("OptionPane.errorIcon")
+                );
+            }
+        });
+
+        addProjectToTrustedCheckBox.addActionListener(e -> refreshAllCheckBox());
+        setProxySettingsCheckBox.addActionListener(e -> refreshAllCheckBox());
+        launchIdeCheckBox.addActionListener(e -> refreshAllCheckBox());
+
+
+        autoReplaceDriveInPaths();
+    }
+
+    private void configureBrowseButtons() {
         browseIdeSettingsFolderPc.addActionListener(e -> {
             JFileChooser jFileChooser = new JFileChooser();
             jFileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -88,7 +161,6 @@ public class Form extends JFrame {
         browseIdeaExecutable.setIcon(UIManager.getIcon("Tree.closedIcon"));
         ideaExecutable.putClientProperty(FlatClientProperties.TEXT_FIELD_TRAILING_COMPONENT, browseIdeaExecutable);
 
-
         browseProjectPath.addActionListener(e -> {
             JFileChooser jFileChooser = new JFileChooser();
             jFileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -109,59 +181,50 @@ public class Form extends JFrame {
         });
         browseGitExecutable.setIcon(UIManager.getIcon("Tree.closedIcon"));
         gitExecutable.putClientProperty(FlatClientProperties.TEXT_FIELD_TRAILING_COMPONENT, browseGitExecutable);
-
-
-        execute.addActionListener(e -> {
-            //VALIDATION
-            if (validateThis()) {
-                //PERSISTENCE
-                persist();
-                //EXECUTION
-                ////refactor
-                RefactorManager.refactorSettings(ideSettingsFolderUsb.getText(), oldDrive.getSelectedItem().toString(), currentDrive.getSelectedItem().toString());
-                ////copy
-
-                CopyManager copyManager = new CopyManager(ideSettingsFolderPc.getText(), ideSettingsFolderUsb.getText());
-                switch (task.getSelectedIndex()) {
-                    case 2 -> copyManager.copyUsbToPc();
-                    case 3 -> copyManager.copyPcToUsb();
-                }
-                ////git
-                Git git = new Git(gitExecutable.getText());
-                if (addProjectToTrustedCheckBox.isSelected()) {
-                    git.addProjectToTrusted(projectPath.getText());
-                }
-
-                if (setProxySettingsCheckBox.isSelected()) {
-                    git.setProxySettings(host.getText(), username.getText(), password.getText());
-                }
-
-                ////launch
-                if (launchIdeCheckBox.isSelected()) {
-                    //TODO: Implement
-                    //...
-                }
-            }
-
-        });
-        cancel.addActionListener(e -> {
-            dispose();
-            System.exit(0);
-        });
-        launchIdeCheckBox.addActionListener(e -> refreshLaunchIdeCheckBox());
-
-        openCmd.addActionListener(e -> {
-            //TODO: add validation
-            Git git = new Git(gitExecutable.getText());
-            git.openCmd();
-        });
-        addProjectToTrustedCheckBox.addActionListener(e -> refreshAddProjectStatusToTrustedCheckBox());
-        setProxySettingsCheckBox.addActionListener(e -> {
-            refreshSetProxySettingsCheckBox();
-        });
     }
 
-    private void refreshAddProjectStatusToTrustedCheckBox() {
+    private void autoReplaceDriveInPaths() {
+        List<Character> drivesList = new ArrayList<>();
+        List<JTextField> ts = new ArrayList<>();
+
+        if (ideaExecutable.getText().length() > 0) {
+            drivesList.add(ideSettingsFolderUsb.getText().charAt(0));
+            ts.add(ideSettingsFolderUsb);
+        }
+        if (gitExecutable.getText().length() > 0) {
+            drivesList.add(gitExecutable.getText().charAt(0));
+            ts.add(gitExecutable);
+        }
+        if (projectPath.getText().length() > 0 && addProjectToTrustedCheckBox.isSelected()) {
+            drivesList.add(projectPath.getText().charAt(0));
+            ts.add(projectPath);
+        }
+        if (ideaExecutable.getText().length() > 0 && launchIdeCheckBox.isSelected()) {
+            drivesList.add(ideaExecutable.getText().charAt(0));
+            ts.add(ideaExecutable);
+        }
+        if (drivesList.stream().distinct().count() == 1) {
+            char oDrive = drivesList.get(0);
+            char cDrive = Util.getCurrentDrive();
+
+            if (oDrive != cDrive) {
+                int resp = JOptionPane.showConfirmDialog(
+                        SwingUtilities.windowForComponent(Form.this),
+                        "Detected old drive name in paths.\nDo you want to replace them with new drive name?",
+                        "Fast refactor available",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.QUESTION_MESSAGE
+                );
+                if (resp == JOptionPane.YES_OPTION) {
+                    for (JTextField textField : ts) {
+                        textField.setText(cDrive + textField.getText().substring(1));
+                    }
+                }
+            }
+        }
+    }
+
+    private void refreshAllCheckBox() {
         if (addProjectToTrustedCheckBox.isSelected()) {
             projectPathLbl.setVisible(true);
             projectPath.setVisible(true);
@@ -169,9 +232,7 @@ public class Form extends JFrame {
             projectPathLbl.setVisible(false);
             projectPath.setVisible(false);
         }
-    }
 
-    private void refreshSetProxySettingsCheckBox() {
         if (setProxySettingsCheckBox.isSelected()) {
             hostLbl.setVisible(true);
             usernameLbl.setVisible(true);
@@ -187,9 +248,7 @@ public class Form extends JFrame {
             username.setVisible(false);
             password.setVisible(false);
         }
-    }
 
-    private void refreshLaunchIdeCheckBox() {
         if (launchIdeCheckBox.isSelected()) {
             launchPadding.setVisible(true);
         } else {
@@ -200,18 +259,27 @@ public class Form extends JFrame {
     private boolean validateThis() {
         String message = "";
 
-        if (!Validator.isValidOldDrive(oldDrive.getSelectedIndex())) {
+       /* if (!Validator.isValidOldDrive(oldDrive.getSelectedIndex())) {
             message = "Invalid old drive";
         } else if (!Validator.isValidCurrentDrive(currentDrive.getSelectedIndex())) {
             message = "Invalid current drive";
-        } else if (!Validator.isValidIdeSettingsFolderPc(ideSettingsFolderPc.getText())) {
+        } else */
+        if (!Validator.isValidIdeSettingsFolderPc(ideSettingsFolderPc.getText())) {
             message = "Invalid IDE settings folder PC";
         } else if (!Validator.isValidIdeSettingsFolderUsb(ideSettingsFolderUsb.getText())) {
             message = "Invalid IDE settings folder USB";
         } else if (!Validator.isValidTask(task.getSelectedIndex())) {
             message = "Invalid task";
+        } else if (!Validator.isValidGitExecutable(gitExecutable.getText())) {
+            message = "Invalid git executable";
         } else if (!Validator.isValidProjectPath(projectPath.getText())) {
             message = "Invalid project path";
+        } else if (!Validator.isValidHost(host.getText())) {
+            message = "Invalid git proxy host";
+        } else if (!Validator.isValidUsername(username.getText())) {
+            message = "Invalid git proxy username";
+        } else if (!Validator.isValidPassword(password.getText())) {
+            message = "Invalid git proxy password";
         } else if (!Validator.isValidIdeaExecutable(ideaExecutable.getText())) {
             message = "Invalid IDEA executable";
         }
@@ -231,23 +299,37 @@ public class Form extends JFrame {
 
     private void load() {
         AppProperties.load();
-        oldDrive.setSelectedIndex(Optional.ofNullable(AppProperties.getOldDrive()).orElse(0));
-        currentDrive.setSelectedIndex(Optional.ofNullable(AppProperties.getCurrentDrive()).orElse(0));
-        ideSettingsFolderPc.setText(AppProperties.getIdeSettingsFolderPc());
-        ideSettingsFolderUsb.setText(AppProperties.getIdeSettingsFolderUsb());
+        /*oldDrive.setSelectedIndex(Optional.ofNullable(AppProperties.getOldDrive()).orElse(0));
+        currentDrive.setSelectedIndex(Optional.ofNullable(AppProperties.getCurrentDrive()).orElse(0));*/
+        ideSettingsFolderPc.setText(Optional.ofNullable(AppProperties.getIdeSettingsFolderPc()).orElse(System.getenv("APPDATA") + "\\JetBrains"));
+        ideSettingsFolderUsb.setText(Optional.ofNullable(AppProperties.getIdeSettingsFolderUsb()).orElse(""));
         task.setSelectedIndex(Optional.ofNullable(AppProperties.getTask()).orElse(0));
+        gitExecutable.setText(Optional.ofNullable(AppProperties.getGitExecutable()).orElse(""));
+        addProjectToTrustedCheckBox.setSelected(Optional.ofNullable(AppProperties.getAddProjectToTrusted()).orElse(false));
+        projectPath.setText(Optional.ofNullable(AppProperties.getProjectPath()).orElse(""));
+        setProxySettingsCheckBox.setSelected(Optional.ofNullable(AppProperties.getSetProxySettings()).orElse(false));
+        host.setText(Optional.ofNullable(AppProperties.getHost()).orElse(""));
+        username.setText(Optional.ofNullable(AppProperties.getUsername()).orElse(""));
+        password.setText(Optional.ofNullable(AppProperties.getPassword()).orElse(""));
         launchIdeCheckBox.setSelected(Optional.ofNullable(AppProperties.getLaunchIde()).orElse(false));
-        projectPath.setText(AppProperties.getProjectPath());
+        ideaExecutable.setText(Optional.ofNullable(AppProperties.getIdeaExecutable()).orElse(""));
     }
 
     private void persist() {
-        AppProperties.setOldDrive(oldDrive.getSelectedIndex());
-        AppProperties.setCurrentDrive(currentDrive.getSelectedIndex());
+/*        AppProperties.setOldDrive(oldDrive.getSelectedIndex());
+        AppProperties.setCurrentDrive(currentDrive.getSelectedIndex());*/
         AppProperties.setIdeSettingsFolderPc(ideSettingsFolderPc.getText());
         AppProperties.setIdeSettingsFolderUsb(ideSettingsFolderUsb.getText());
         AppProperties.setTask(task.getSelectedIndex());
-        AppProperties.setLaunchIde(launchIdeCheckBox.isSelected());
+        AppProperties.setGitExecutable(gitExecutable.getText());
+        AppProperties.setAddProjectToTrusted(addProjectToTrustedCheckBox.isSelected());
         AppProperties.setProjectPath(projectPath.getText());
+        AppProperties.setSetProxySettings(setProxySettingsCheckBox.isSelected());
+        AppProperties.setHost(host.getText());
+        AppProperties.setUsername(username.getText());
+        AppProperties.setPassword(password.getText());
+        AppProperties.setLaunchIde(launchIdeCheckBox.isSelected());
+        AppProperties.setIdeaExecutable(ideaExecutable.getText());
         AppProperties.store();
     }
 
@@ -410,7 +492,6 @@ public class Form extends JFrame {
         task = new JComboBox();
         final DefaultComboBoxModel defaultComboBoxModel3 = new DefaultComboBoxModel();
         defaultComboBoxModel3.addElement("Select a task");
-        defaultComboBoxModel3.addElement("Just refactor");
         defaultComboBoxModel3.addElement("Refactor and copy from USB to PC");
         defaultComboBoxModel3.addElement("Refactor and copy from PC to USB");
         task.setModel(defaultComboBoxModel3);
