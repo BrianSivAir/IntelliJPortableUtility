@@ -160,6 +160,7 @@ public class AppProperties {
                 throw new RuntimeException(e);
             }
         }
+        logger.info("No user settings found");
     }
 
     public static void store() {
