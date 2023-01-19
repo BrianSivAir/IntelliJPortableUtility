@@ -3,16 +3,17 @@ package it.brian.utility;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
+import java.nio.file.Paths;
+import java.util.regex.Pattern;
 
 public class Validator {
-//    public static boolean isValidOldDrive(int oldDrive) {
-//        return 0 < oldDrive && oldDrive < 24;
-//    }
-//    public static boolean isValidCurrentDrive(int currentDrive) {
-//        return 0 < currentDrive && currentDrive < 24;
-//    }
     public static boolean isValidIdeSettingsFolderPc(String ideSettingsFolderPc) {
-        return new File(ideSettingsFolderPc).isDirectory();
+        try {
+            Paths.get(ideSettingsFolderPc);
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
     }
     public static boolean isValidIdeSettingsFolderUsb(String ideSettingsFolderUsb) {
         return new File(ideSettingsFolderUsb).isDirectory();
@@ -32,7 +33,7 @@ public class Validator {
     }
 
     public static boolean isValidHost(String host) {
-        return host.trim().length() > 0;
+        return Pattern.matches("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$", host);
     }
 
     public static boolean isValidUsername(String username) {

@@ -1,8 +1,10 @@
 package it.brian.utility;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
+import java.io.File;
 import java.io.IOException;
 
 public class Util {
@@ -21,5 +23,15 @@ public class Util {
             logger.error("Failed to launch IDEA");
             throw new RuntimeException(e);
         }
+    }
+
+    public static boolean deleteLocalSettings(String localSettingsFolder) {
+        try {
+            FileUtils.deleteDirectory(new File(localSettingsFolder));
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+
     }
 }

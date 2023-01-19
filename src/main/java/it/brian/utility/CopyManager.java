@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import java.io.File;
 import java.io.IOException;
 
+//TODO: Move files in %temp% folder while refactoring
 public class CopyManager {
     private static final Logger logger = LogManager.getLogger(CopyManager.class);
     private File ideSettingsFolderPcFile;

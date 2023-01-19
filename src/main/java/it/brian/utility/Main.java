@@ -11,7 +11,9 @@ public class Main {
     public static void main(String[] args) {
         FlatMacDarkLaf.setup();
         UIManager.put("PasswordField.showRevealButton", true);
-        new Form();
+        Form form = new Form();
 
     }
+
+
 }

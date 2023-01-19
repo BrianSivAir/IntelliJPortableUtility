@@ -6,10 +6,6 @@ import org.apache.log4j.Logger;
 import java.io.IOException;
 
 public class Git {
-    //settare path git.exe
-    //aggiungere progetto ai trusted
-    //impostare il proxy
-
     private static final Logger logger = LogManager.getLogger(Git.class);
     private String gitExePath;
 

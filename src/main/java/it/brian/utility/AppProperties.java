@@ -15,8 +15,6 @@ public class AppProperties {
 
     private static final Properties properties = new Properties();
 
-//    private static final String OLD_DRIVE = "drive.old";
-//    private static final String CURRENT_DRIVE = "drve.current";
     private static final String IDE_SETTINGS_FOLDER_PC = "ide.settings.pc";
     private static final String IDE_SETTINGS_FOLDER_USB = "ide.settings.usb";
     private static final String TASK = "app.task";
@@ -30,24 +28,6 @@ public class AppProperties {
     private static final String LAUNCH_IDE = "app.launchide";
     private static final String IDEA_EXECUTABLE = "ide.executable";
 
-
-//    public static void setOldDrive(int oldDrive) {
-//        properties.setProperty(OLD_DRIVE, String.valueOf(oldDrive));
-//    }
-
-//    public static Integer getOldDrive() {
-//        String oldDrive = properties.getProperty(OLD_DRIVE);
-//        return oldDrive == null ? null : Integer.parseInt(oldDrive);
-//    }
-
-//    public static void setCurrentDrive(int currentDrive) {
-//        properties.setProperty(CURRENT_DRIVE, String.valueOf(currentDrive));
-//    }
-
-//    public static Integer getCurrentDrive() {
-//        String currentDrive = properties.getProperty(CURRENT_DRIVE);
-//        return currentDrive == null ? null : Integer.parseInt(currentDrive);
-//    }
 
     public static void setIdeSettingsFolderPc(String ideSettingsFolderPc) {
         properties.setProperty(IDE_SETTINGS_FOLDER_PC, ideSettingsFolderPc);

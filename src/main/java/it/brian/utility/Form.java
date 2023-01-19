@@ -4,21 +4,22 @@ import com.formdev.flatlaf.FlatClientProperties;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
-import org.apache.commons.io.Charsets;
+import org.apache.commons.collections4.map.LinkedMap;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Base64;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.*;
 import java.util.List;
-import java.util.Optional;
 
 public class Form extends JFrame {
-    private JComboBox oldDrive;
-    private JComboBox currentDrive;
+    private static final Logger logger = LogManager.getLogger(Form.class);
     private JTextField ideSettingsFolderPc;
     private JTextField ideSettingsFolderUsb;
     private JComboBox task;
@@ -41,6 +42,7 @@ public class Form extends JFrame {
     private JLabel usernameLbl;
     private JLabel passwordLbl;
     private JPanel launchPadding;
+    private JButton deleteLocalSettings;
     private JButton browseIdeSettingsFolderPc = new JButton();
     private JButton browseIdeSettingsFolderUsb = new JButton();
     private JButton browseProjectPath = new JButton();
@@ -49,7 +51,7 @@ public class Form extends JFrame {
 
     private void init() {
         setContentPane(contentPane);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         setVisible(true);
         setTitle("IntelliJ Portable Utility");
         pack();
@@ -58,12 +60,30 @@ public class Form extends JFrame {
         getRootPane().setDefaultButton(execute);
         load();
         refreshAllCheckBox();
+        addFocusLostListeners();
+        addWindowListener(windowAdapter);
+    }
+
+    private void addFocusLostListeners() {
+        ideSettingsFolderPc.addFocusListener(realTimeValidator);
+        ideSettingsFolderUsb.addFocusListener(realTimeValidator);
+        ideSettingsFolderPc.addFocusListener(realTimeValidator);
+        ideSettingsFolderUsb.addFocusListener(realTimeValidator);
+        task.addFocusListener(realTimeValidator);
+        gitExecutable.addFocusListener(realTimeValidator);
+        projectPath.addFocusListener(realTimeValidator);
+        host.addFocusListener(realTimeValidator);
+        username.addFocusListener(realTimeValidator);
+        password.addFocusListener(realTimeValidator);
+        ideaExecutable.addFocusListener(realTimeValidator);
     }
 
     public Form() {
         init();
 
         configureBrowseButtons();
+
+        autoReplaceDriveInPaths();
 
         execute.addActionListener(e -> {
             //VALIDATION
@@ -76,8 +96,8 @@ public class Form extends JFrame {
                 RefactorManager refactorManager = new RefactorManager(Util.getCurrentDrive());
                 switch (task.getSelectedIndex()) {
                     case 1 -> {
-                        refactorManager.loadSettings(ideSettingsFolderUsb.getText());
                         copyManager.copyUsbToPc();
+                        refactorManager.loadSettings(ideSettingsFolderPc.getText());
                     }
                     case 2 -> {
                         copyManager.copyPcToUsb();
@@ -102,8 +122,7 @@ public class Form extends JFrame {
 
         });
         cancel.addActionListener(e -> {
-            dispose();
-            System.exit(0);
+            dispatchEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
         });
 
         openCmd.addActionListener(e -> {
@@ -126,7 +145,23 @@ public class Form extends JFrame {
         launchIdeCheckBox.addActionListener(e -> refreshAllCheckBox());
 
 
-        autoReplaceDriveInPaths();
+        deleteLocalSettings.addActionListener(e -> {
+            if (Util.deleteLocalSettings(ideSettingsFolderPc.getText())) {
+                JOptionPane.showMessageDialog(
+                        SwingUtilities.windowForComponent(Form.this),
+                        "Local IDE settings deleted successfully",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+            } else {
+                JOptionPane.showMessageDialog(
+                        SwingUtilities.windowForComponent(Form.this),
+                        "Failed to delete local IDE settings",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
+        });
     }
 
     private void configureBrowseButtons() {
@@ -187,7 +222,7 @@ public class Form extends JFrame {
         List<Character> drivesList = new ArrayList<>();
         List<JTextField> ts = new ArrayList<>();
 
-        if (ideaExecutable.getText().length() > 0) {
+        if (ideSettingsFolderUsb.getText().length() > 0) {
             drivesList.add(ideSettingsFolderUsb.getText().charAt(0));
             ts.add(ideSettingsFolderUsb);
         }
@@ -256,51 +291,68 @@ public class Form extends JFrame {
         }
     }
 
-    private boolean validateThis() {
-        String message = "";
+    private LinkedMap<JComponent, String> getInvalidComponents() {
+        LinkedMap<JComponent, String> invalidComponents = new LinkedMap<>();
 
-       /* if (!Validator.isValidOldDrive(oldDrive.getSelectedIndex())) {
-            message = "Invalid old drive";
-        } else if (!Validator.isValidCurrentDrive(currentDrive.getSelectedIndex())) {
-            message = "Invalid current drive";
-        } else */
         if (!Validator.isValidIdeSettingsFolderPc(ideSettingsFolderPc.getText())) {
-            message = "Invalid IDE settings folder PC";
-        } else if (!Validator.isValidIdeSettingsFolderUsb(ideSettingsFolderUsb.getText())) {
-            message = "Invalid IDE settings folder USB";
-        } else if (!Validator.isValidTask(task.getSelectedIndex())) {
-            message = "Invalid task";
-        } else if (!Validator.isValidGitExecutable(gitExecutable.getText())) {
-            message = "Invalid git executable";
-        } else if (!Validator.isValidProjectPath(projectPath.getText())) {
-            message = "Invalid project path";
-        } else if (!Validator.isValidHost(host.getText())) {
-            message = "Invalid git proxy host";
-        } else if (!Validator.isValidUsername(username.getText())) {
-            message = "Invalid git proxy username";
-        } else if (!Validator.isValidPassword(password.getText())) {
-            message = "Invalid git proxy password";
-        } else if (!Validator.isValidIdeaExecutable(ideaExecutable.getText())) {
-            message = "Invalid IDEA executable";
+            invalidComponents.put(ideSettingsFolderPc, "Invalid IDE settings folder PC");
+        }
+        if (!Validator.isValidIdeSettingsFolderUsb(ideSettingsFolderUsb.getText())) {
+            invalidComponents.put(ideSettingsFolderUsb, "Invalid IDE settings folder USB");
+        }
+        if (!Validator.isValidTask(task.getSelectedIndex())) {
+            invalidComponents.put(task, "Invalid task");
+        }
+        if (!Validator.isValidGitExecutable(gitExecutable.getText())) {
+            invalidComponents.put(gitExecutable, "Invalid git executable");
+        }
+        if (addProjectToTrustedCheckBox.isSelected()) {
+            if (!Validator.isValidProjectPath(projectPath.getText())) {
+                invalidComponents.put(projectPath, "Invalid project path");
+            }
+        }
+        if (setProxySettingsCheckBox.isSelected()) {
+            if (!Validator.isValidHost(host.getText())) {
+                invalidComponents.put(host, "Invalid git proxy host");
+            } else if (!Validator.isValidUsername(username.getText())) {
+                invalidComponents.put(username, "Invalid git proxy username");
+            } else if (!Validator.isValidPassword(password.getText())) {
+                invalidComponents.put(password, "Invalid git proxy password");
+            }
+        }
+        if (launchIdeCheckBox.isSelected()) {
+            if (!Validator.isValidIdeaExecutable(ideaExecutable.getText())) {
+                invalidComponents.put(ideaExecutable, "Invalid IDEA executable");
+            }
+        }
+        return invalidComponents;
+    }
+
+    private boolean validateThis() {
+        LinkedMap<JComponent, String> invalidComponents = getInvalidComponents();
+
+        JComponent firstKey = null;
+
+        try {
+            firstKey = invalidComponents.firstKey();
+        } catch (NoSuchElementException e) {
+            return true;
         }
 
-        if (!message.equals("")) {
-            JOptionPane.showMessageDialog(
-                    SwingUtilities.windowForComponent(Form.this),
-                    message,
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE,
-                    UIManager.getIcon("OptionPane.errorIcon")
-            );
-            return false;
-        }
-        return true;
+        String message = invalidComponents.get(firstKey);
+
+        JOptionPane.showMessageDialog(
+                SwingUtilities.windowForComponent(Form.this),
+                message,
+                "Error",
+                JOptionPane.ERROR_MESSAGE,
+                UIManager.getIcon("OptionPane.errorIcon")
+        );
+        return false;
     }
 
     private void load() {
         AppProperties.load();
-        /*oldDrive.setSelectedIndex(Optional.ofNullable(AppProperties.getOldDrive()).orElse(0));
-        currentDrive.setSelectedIndex(Optional.ofNullable(AppProperties.getCurrentDrive()).orElse(0));*/
         ideSettingsFolderPc.setText(Optional.ofNullable(AppProperties.getIdeSettingsFolderPc()).orElse(System.getenv("APPDATA") + "\\JetBrains"));
         ideSettingsFolderUsb.setText(Optional.ofNullable(AppProperties.getIdeSettingsFolderUsb()).orElse(""));
         task.setSelectedIndex(Optional.ofNullable(AppProperties.getTask()).orElse(0));
@@ -316,8 +368,6 @@ public class Form extends JFrame {
     }
 
     private void persist() {
-/*        AppProperties.setOldDrive(oldDrive.getSelectedIndex());
-        AppProperties.setCurrentDrive(currentDrive.getSelectedIndex());*/
         AppProperties.setIdeSettingsFolderPc(ideSettingsFolderPc.getText());
         AppProperties.setIdeSettingsFolderUsb(ideSettingsFolderUsb.getText());
         AppProperties.setTask(task.getSelectedIndex());
@@ -332,6 +382,31 @@ public class Form extends JFrame {
         AppProperties.setIdeaExecutable(ideaExecutable.getText());
         AppProperties.store();
     }
+
+    FocusAdapter realTimeValidator = new FocusAdapter() {
+        @Override
+        public void focusLost(FocusEvent e) {
+            LinkedMap<JComponent, String> invalidComponents = getInvalidComponents();
+            JComponent jcomponent = ((JComponent) e.getComponent());
+            if (invalidComponents.containsKey(jcomponent)) {
+                jcomponent.setToolTipText(invalidComponents.get(jcomponent));
+                jcomponent.putClientProperty("JComponent.outline", "error");
+            } else {
+                jcomponent.setToolTipText(null);
+                jcomponent.putClientProperty("JComponent.outline", null);
+            }
+        }
+    };
+
+    WindowAdapter windowAdapter = new WindowAdapter() {
+        @Override
+        public void windowClosing(WindowEvent e) {
+            logger.info("Closing");
+            setDefaultCloseOperation(EXIT_ON_CLOSE);
+        }
+    };
+
+
 
     {
 // GUI initializer generated by IntelliJ IDEA GUI Designer
@@ -349,7 +424,7 @@ public class Form extends JFrame {
      */
     private void $$$setupUI$$$() {
         contentPane = new JPanel();
-        contentPane.setLayout(new GridLayoutManager(5, 3, new Insets(0, 0, 0, 0), -1, -1));
+        contentPane.setLayout(new GridLayoutManager(5, 4, new Insets(0, 0, 0, 0), -1, -1));
         contentPane.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         final Spacer spacer1 = new Spacer();
         contentPane.add(spacer1, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
@@ -358,13 +433,13 @@ public class Form extends JFrame {
         contentPane.add(execute, new GridConstraints(4, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         cancel = new JButton();
         cancel.setText("Cancel");
-        contentPane.add(cancel, new GridConstraints(4, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        contentPane.add(cancel, new GridConstraints(4, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         launchIdeCheckBox = new JCheckBox();
         launchIdeCheckBox.setText("Launch IDE");
         contentPane.add(launchIdeCheckBox, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        contentPane.add(panel1, new GridConstraints(1, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        contentPane.add(panel1, new GridConstraints(1, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         panel1.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Git", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         final JPanel panel2 = new JPanel();
         panel2.setLayout(new GridLayoutManager(9, 2, new Insets(0, 0, 0, 0), -1, -1));
@@ -409,108 +484,52 @@ public class Form extends JFrame {
         panel2.add(password, new GridConstraints(6, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final JPanel panel3 = new JPanel();
         panel3.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        contentPane.add(panel3, new GridConstraints(0, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        contentPane.add(panel3, new GridConstraints(0, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         panel3.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Settings", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         final JPanel panel4 = new JPanel();
-        panel4.setLayout(new GridLayoutManager(5, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel4.setLayout(new GridLayoutManager(4, 3, new Insets(0, 0, 0, 0), -1, -1));
         panel3.add(panel4, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         panel4.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(7, 7, 7, 7), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
-        final JLabel label2 = new JLabel();
-        label2.setText("Drive:");
-        panel4.add(label2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer3 = new Spacer();
-        panel4.add(spacer3, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        oldDrive = new JComboBox();
-        final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
-        defaultComboBoxModel1.addElement("Select old drive");
-        defaultComboBoxModel1.addElement("D");
-        defaultComboBoxModel1.addElement("E");
-        defaultComboBoxModel1.addElement("F");
-        defaultComboBoxModel1.addElement("G");
-        defaultComboBoxModel1.addElement("H");
-        defaultComboBoxModel1.addElement("I");
-        defaultComboBoxModel1.addElement("J");
-        defaultComboBoxModel1.addElement("K");
-        defaultComboBoxModel1.addElement("L");
-        defaultComboBoxModel1.addElement("M");
-        defaultComboBoxModel1.addElement("N");
-        defaultComboBoxModel1.addElement("O");
-        defaultComboBoxModel1.addElement("P");
-        defaultComboBoxModel1.addElement("Q");
-        defaultComboBoxModel1.addElement("R");
-        defaultComboBoxModel1.addElement("S");
-        defaultComboBoxModel1.addElement("T");
-        defaultComboBoxModel1.addElement("U");
-        defaultComboBoxModel1.addElement("V");
-        defaultComboBoxModel1.addElement("W");
-        defaultComboBoxModel1.addElement("X");
-        defaultComboBoxModel1.addElement("Y");
-        defaultComboBoxModel1.addElement("Z");
-        oldDrive.setModel(defaultComboBoxModel1);
-        panel4.add(oldDrive, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        currentDrive = new JComboBox();
-        final DefaultComboBoxModel defaultComboBoxModel2 = new DefaultComboBoxModel();
-        defaultComboBoxModel2.addElement("Select current drive");
-        defaultComboBoxModel2.addElement("D");
-        defaultComboBoxModel2.addElement("E");
-        defaultComboBoxModel2.addElement("F");
-        defaultComboBoxModel2.addElement("G");
-        defaultComboBoxModel2.addElement("H");
-        defaultComboBoxModel2.addElement("I");
-        defaultComboBoxModel2.addElement("J");
-        defaultComboBoxModel2.addElement("K");
-        defaultComboBoxModel2.addElement("L");
-        defaultComboBoxModel2.addElement("M");
-        defaultComboBoxModel2.addElement("N");
-        defaultComboBoxModel2.addElement("O");
-        defaultComboBoxModel2.addElement("P");
-        defaultComboBoxModel2.addElement("Q");
-        defaultComboBoxModel2.addElement("R");
-        defaultComboBoxModel2.addElement("S");
-        defaultComboBoxModel2.addElement("T");
-        defaultComboBoxModel2.addElement("U");
-        defaultComboBoxModel2.addElement("V");
-        defaultComboBoxModel2.addElement("W");
-        defaultComboBoxModel2.addElement("X");
-        defaultComboBoxModel2.addElement("Y");
-        defaultComboBoxModel2.addElement("Z");
-        currentDrive.setModel(defaultComboBoxModel2);
-        panel4.add(currentDrive, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label3 = new JLabel();
-        label3.setText("IDE settings folder PC:");
-        panel4.add(label3, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel4.add(spacer3, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        final JLabel label2 = new JLabel();
+        label2.setText("IDE settings folder PC:");
+        panel4.add(label2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         ideSettingsFolderPc = new JTextField();
-        panel4.add(ideSettingsFolderPc, new GridConstraints(1, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        final JLabel label4 = new JLabel();
-        label4.setText("IDE settings folder USB:");
-        panel4.add(label4, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel4.add(ideSettingsFolderPc, new GridConstraints(0, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        final JLabel label3 = new JLabel();
+        label3.setText("IDE settings folder USB:");
+        panel4.add(label3, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         ideSettingsFolderUsb = new JTextField();
-        panel4.add(ideSettingsFolderUsb, new GridConstraints(2, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        final JLabel label5 = new JLabel();
-        label5.setText("Task:");
-        panel4.add(label5, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel4.add(ideSettingsFolderUsb, new GridConstraints(1, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        final JLabel label4 = new JLabel();
+        label4.setText("Task:");
+        panel4.add(label4, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         task = new JComboBox();
-        final DefaultComboBoxModel defaultComboBoxModel3 = new DefaultComboBoxModel();
-        defaultComboBoxModel3.addElement("Select a task");
-        defaultComboBoxModel3.addElement("Refactor and copy from USB to PC");
-        defaultComboBoxModel3.addElement("Refactor and copy from PC to USB");
-        task.setModel(defaultComboBoxModel3);
-        panel4.add(task, new GridConstraints(3, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
+        defaultComboBoxModel1.addElement("Select a task");
+        defaultComboBoxModel1.addElement("Refactor and copy from USB to PC");
+        defaultComboBoxModel1.addElement("Refactor and copy from PC to USB");
+        task.setModel(defaultComboBoxModel1);
+        panel4.add(task, new GridConstraints(2, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         launchPadding = new JPanel();
         launchPadding.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        contentPane.add(launchPadding, new GridConstraints(3, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        contentPane.add(launchPadding, new GridConstraints(3, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         launchPadding.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Launch", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         launchPanel = new JPanel();
         launchPanel.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
         launchPadding.add(launchPanel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         launchPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(7, 7, 7, 7), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
-        final JLabel label6 = new JLabel();
-        label6.setText("IDEA executable:");
-        launchPanel.add(label6, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label5 = new JLabel();
+        label5.setText("IDEA executable:");
+        launchPanel.add(label5, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer4 = new Spacer();
         launchPanel.add(spacer4, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         ideaExecutable = new JTextField();
         launchPanel.add(ideaExecutable, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        deleteLocalSettings = new JButton();
+        deleteLocalSettings.setText("Delete local settings");
+        contentPane.add(deleteLocalSettings, new GridConstraints(4, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**
