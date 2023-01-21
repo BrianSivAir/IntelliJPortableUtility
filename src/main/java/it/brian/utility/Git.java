@@ -16,7 +16,7 @@ public class Git {
     public void addProjectToTrusted(String path) {
         logger.info("Adding project to trusted");
         try {
-            Process process = new ProcessBuilder(gitExePath, "config", "--global", "--add safe.directory " + path).start();
+            Process process = new ProcessBuilder(gitExePath, "config",  "--global", "--add", "safe.directory", path).start();
             logger.debug(process.info());
         } catch (IOException e) {
             logger.error("Failed to add project to trusted");
@@ -29,7 +29,7 @@ public class Git {
         String url = "http://%s:%s@%s".formatted(username, password, host);
         Process process = null;
         try {
-            process = new ProcessBuilder(gitExePath, "config", "--global", "http.proxy " + url).start();
+            process = new ProcessBuilder(gitExePath, "config", "--global", "http.proxy", url).start();
             logger.debug(process.info());
         } catch (IOException e) {
             logger.error("Failed to set proxy settings");
