@@ -15,9 +15,11 @@ public class AppProperties {
 
     private static final Properties properties = new Properties();
 
+    private static final String SETUP_IDE_SETTINGS = "ide.settings";
     private static final String IDE_SETTINGS_FOLDER_PC = "ide.settings.pc";
     private static final String IDE_SETTINGS_FOLDER_USB = "ide.settings.usb";
     private static final String TASK = "app.task";
+    private static final String SETUP_GIT = "git";
     private static final String GIT_EXECUTABLE = "git.exe";
     private static final String ADD_PROJECT_TO_TRUSTED = "git.project.addtotrusted";
     private static final String PROJECT_PATH = "git.project.path";
@@ -28,6 +30,15 @@ public class AppProperties {
     private static final String LAUNCH_IDE = "app.launchide";
     private static final String IDEA_EXECUTABLE = "ide.executable";
 
+
+    public static void setSetupIdeSettings(Boolean setupIdeSettings) {
+        properties.setProperty(SETUP_IDE_SETTINGS, String.valueOf(setupIdeSettings));
+    }
+
+    public static Boolean getSetupIdeSettings() {
+        String setupIdeSettings = properties.getProperty(SETUP_IDE_SETTINGS);
+        return setupIdeSettings == null ? null : Boolean.parseBoolean(setupIdeSettings);
+    }
 
     public static void setIdeSettingsFolderPc(String ideSettingsFolderPc) {
         properties.setProperty(IDE_SETTINGS_FOLDER_PC, ideSettingsFolderPc);
@@ -52,6 +63,15 @@ public class AppProperties {
     public static Integer getTask() {
         String task = properties.getProperty(TASK);
         return task == null ? null : Integer.parseInt(task);
+    }
+
+    public static void setSetupGit(Boolean setupGit) {
+        properties.setProperty(SETUP_GIT, String.valueOf(setupGit));
+    }
+
+    public static Boolean getSetupGit() {
+        String setupGit = properties.getProperty(SETUP_GIT);
+        return setupGit == null ? null : Boolean.parseBoolean(setupGit);
     }
 
     public static void setGitExecutable(String gitExecutable) {

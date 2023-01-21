@@ -43,6 +43,12 @@ public class Form extends JFrame {
     private JLabel passwordLbl;
     private JPanel launchPadding;
     private JButton deleteLocalSettings;
+    private JCheckBox setupGitCheckBox;
+    private JCheckBox setupIDESettingsCheckBox;
+    private JPanel settingsPadding;
+    private JPanel settingsPanel;
+    private JPanel gitPadding;
+    private JPanel gitPanel;
     private JButton browseIdeSettingsFolderPc = new JButton();
     private JButton browseIdeSettingsFolderUsb = new JButton();
     private JButton browseProjectPath = new JButton();
@@ -85,6 +91,12 @@ public class Form extends JFrame {
 
         autoReplaceDriveInPaths();
 
+        setupIDESettingsCheckBox.addActionListener(e -> refreshAllCheckBox());
+        setupGitCheckBox.addActionListener(e -> refreshAllCheckBox());
+        addProjectToTrustedCheckBox.addActionListener(e -> refreshAllCheckBox());
+        setProxySettingsCheckBox.addActionListener(e -> refreshAllCheckBox());
+        launchIdeCheckBox.addActionListener(e -> refreshAllCheckBox());
+
         execute.addActionListener(e -> {
             //VALIDATION
             if (validateThis()) {
@@ -92,31 +104,39 @@ public class Form extends JFrame {
                 persist();
                 //EXECUTION
                 ////copy
-                CopyManager copyManager = new CopyManager(ideSettingsFolderPc.getText(), ideSettingsFolderUsb.getText());
-                RefactorManager refactorManager = new RefactorManager(Util.getCurrentDrive());
-                switch (task.getSelectedIndex()) {
-                    case 1 -> {
-                        copyManager.copyUsbToPc();
-                        refactorManager.loadSettings(ideSettingsFolderPc.getText());
-                    }
-                    case 2 -> {
-                        copyManager.copyPcToUsb();
-                        refactorManager.backupSettings(ideSettingsFolderUsb.getText());
+                if (setupIDESettingsCheckBox.isSelected()) {
+                    CopyManager copyManager = new CopyManager(ideSettingsFolderPc.getText(), ideSettingsFolderUsb.getText());
+                    RefactorManager refactorManager = new RefactorManager(Util.getCurrentDrive());
+                    switch (task.getSelectedIndex()) {
+                        case 1 -> {
+                            copyManager.copyUsbToPc();
+                            refactorManager.loadSettings(ideSettingsFolderPc.getText());
+                        }
+                        case 2 -> {
+                            copyManager.copyPcToUsb();
+                            refactorManager.backupSettings(ideSettingsFolderUsb.getText());
+                        }
                     }
                 }
                 ////git
-                Git git = new Git(gitExecutable.getText());
-                if (addProjectToTrustedCheckBox.isSelected()) {
-                    git.addProjectToTrusted(projectPath.getText());
-                }
+                if (setupGitCheckBox.isSelected()) {
+                    Git git = new Git(gitExecutable.getText());
+                    if (addProjectToTrustedCheckBox.isSelected()) {
+                        git.addProjectToTrusted(projectPath.getText());
+                    }
 
-                if (setProxySettingsCheckBox.isSelected()) {
-                    git.setProxySettings(host.getText(), username.getText(), password.getText());
+                    if (setProxySettingsCheckBox.isSelected()) {
+                        git.setProxySettings(host.getText(), username.getText(), password.getText());
+                    }
                 }
 
                 ////launch
                 if (launchIdeCheckBox.isSelected()) {
-                    Util.startIdea(ideaExecutable.getText(), projectPath.getText());
+                    String arg = "";
+                    if (setupGitCheckBox.isSelected() && addProjectToTrustedCheckBox.isSelected()) {
+                        arg = projectPath.getText();
+                    }
+                    Util.startIdea(ideaExecutable.getText(), arg);
                 }
             }
 
@@ -139,10 +159,6 @@ public class Form extends JFrame {
                 );
             }
         });
-
-        addProjectToTrustedCheckBox.addActionListener(e -> refreshAllCheckBox());
-        setProxySettingsCheckBox.addActionListener(e -> refreshAllCheckBox());
-        launchIdeCheckBox.addActionListener(e -> refreshAllCheckBox());
 
 
         deleteLocalSettings.addActionListener(e -> {
@@ -222,22 +238,31 @@ public class Form extends JFrame {
         List<Character> drivesList = new ArrayList<>();
         List<JTextField> ts = new ArrayList<>();
 
-        if (ideSettingsFolderUsb.getText().length() > 0) {
-            drivesList.add(ideSettingsFolderUsb.getText().charAt(0));
-            ts.add(ideSettingsFolderUsb);
+        if (setupIDESettingsCheckBox.isSelected()) {
+            if (ideSettingsFolderUsb.getText().length() > 0) {
+                drivesList.add(ideSettingsFolderUsb.getText().charAt(0));
+                ts.add(ideSettingsFolderUsb);
+            }
         }
-        if (gitExecutable.getText().length() > 0) {
-            drivesList.add(gitExecutable.getText().charAt(0));
-            ts.add(gitExecutable);
+
+        if (setupGitCheckBox.isSelected()) {
+            if (gitExecutable.getText().length() > 0) {
+                drivesList.add(gitExecutable.getText().charAt(0));
+                ts.add(gitExecutable);
+            }
+            if (projectPath.getText().length() > 0 && addProjectToTrustedCheckBox.isSelected()) {
+                drivesList.add(projectPath.getText().charAt(0));
+                ts.add(projectPath);
+            }
         }
-        if (projectPath.getText().length() > 0 && addProjectToTrustedCheckBox.isSelected()) {
-            drivesList.add(projectPath.getText().charAt(0));
-            ts.add(projectPath);
+
+        if (launchIdeCheckBox.isSelected()) {
+            if (ideaExecutable.getText().length() > 0) {
+                drivesList.add(ideaExecutable.getText().charAt(0));
+                ts.add(ideaExecutable);
+            }
         }
-        if (ideaExecutable.getText().length() > 0 && launchIdeCheckBox.isSelected()) {
-            drivesList.add(ideaExecutable.getText().charAt(0));
-            ts.add(ideaExecutable);
-        }
+
         if (drivesList.stream().distinct().count() == 1) {
             char oDrive = drivesList.get(0);
             char cDrive = Util.getCurrentDrive();
@@ -284,6 +309,18 @@ public class Form extends JFrame {
             password.setVisible(false);
         }
 
+        if (setupIDESettingsCheckBox.isSelected()) {
+            settingsPadding.setVisible(true);
+        } else {
+            settingsPadding.setVisible(false);
+        }
+
+        if (setupGitCheckBox.isSelected()) {
+            gitPadding.setVisible(true);
+        } else {
+            gitPadding.setVisible(false);
+        }
+
         if (launchIdeCheckBox.isSelected()) {
             launchPadding.setVisible(true);
         } else {
@@ -294,32 +331,38 @@ public class Form extends JFrame {
     private LinkedMap<JComponent, String> getInvalidComponents() {
         LinkedMap<JComponent, String> invalidComponents = new LinkedMap<>();
 
-        if (!Validator.isValidIdeSettingsFolderPc(ideSettingsFolderPc.getText())) {
-            invalidComponents.put(ideSettingsFolderPc, "Invalid IDE settings folder PC");
-        }
-        if (!Validator.isValidIdeSettingsFolderUsb(ideSettingsFolderUsb.getText())) {
-            invalidComponents.put(ideSettingsFolderUsb, "Invalid IDE settings folder USB");
-        }
-        if (!Validator.isValidTask(task.getSelectedIndex())) {
-            invalidComponents.put(task, "Invalid task");
-        }
-        if (!Validator.isValidGitExecutable(gitExecutable.getText())) {
-            invalidComponents.put(gitExecutable, "Invalid git executable");
-        }
-        if (addProjectToTrustedCheckBox.isSelected()) {
-            if (!Validator.isValidProjectPath(projectPath.getText())) {
-                invalidComponents.put(projectPath, "Invalid project path");
+        if (setupIDESettingsCheckBox.isSelected()) {
+            if (!Validator.isValidIdeSettingsFolderPc(ideSettingsFolderPc.getText())) {
+                invalidComponents.put(ideSettingsFolderPc, "Invalid IDE settings folder PC");
+            }
+            if (!Validator.isValidIdeSettingsFolderUsb(ideSettingsFolderUsb.getText())) {
+                invalidComponents.put(ideSettingsFolderUsb, "Invalid IDE settings folder USB");
+            }
+            if (!Validator.isValidTask(task.getSelectedIndex())) {
+                invalidComponents.put(task, "Invalid task");
             }
         }
-        if (setProxySettingsCheckBox.isSelected()) {
-            if (!Validator.isValidHost(host.getText())) {
-                invalidComponents.put(host, "Invalid git proxy host");
-            } else if (!Validator.isValidUsername(username.getText())) {
-                invalidComponents.put(username, "Invalid git proxy username");
-            } else if (!Validator.isValidPassword(password.getText())) {
-                invalidComponents.put(password, "Invalid git proxy password");
+
+        if (setupGitCheckBox.isSelected()) {
+            if (!Validator.isValidGitExecutable(gitExecutable.getText())) {
+                invalidComponents.put(gitExecutable, "Invalid git executable");
+            }
+            if (addProjectToTrustedCheckBox.isSelected()) {
+                if (!Validator.isValidProjectPath(projectPath.getText())) {
+                    invalidComponents.put(projectPath, "Invalid project path");
+                }
+            }
+            if (setProxySettingsCheckBox.isSelected()) {
+                if (!Validator.isValidHost(host.getText())) {
+                    invalidComponents.put(host, "Invalid git proxy host");
+                } else if (!Validator.isValidUsername(username.getText())) {
+                    invalidComponents.put(username, "Invalid git proxy username");
+                } else if (!Validator.isValidPassword(password.getText())) {
+                    invalidComponents.put(password, "Invalid git proxy password");
+                }
             }
         }
+
         if (launchIdeCheckBox.isSelected()) {
             if (!Validator.isValidIdeaExecutable(ideaExecutable.getText())) {
                 invalidComponents.put(ideaExecutable, "Invalid IDEA executable");
@@ -353,9 +396,11 @@ public class Form extends JFrame {
 
     private void load() {
         AppProperties.load();
+        setupIDESettingsCheckBox.setSelected(Optional.ofNullable(AppProperties.getSetupIdeSettings()).orElse(true));
         ideSettingsFolderPc.setText(Optional.ofNullable(AppProperties.getIdeSettingsFolderPc()).orElse(System.getenv("APPDATA") + "\\JetBrains"));
         ideSettingsFolderUsb.setText(Optional.ofNullable(AppProperties.getIdeSettingsFolderUsb()).orElse(""));
         task.setSelectedIndex(Optional.ofNullable(AppProperties.getTask()).orElse(0));
+        setupGitCheckBox.setSelected(Optional.ofNullable(AppProperties.getSetupGit()).orElse(true));
         gitExecutable.setText(Optional.ofNullable(AppProperties.getGitExecutable()).orElse(""));
         addProjectToTrustedCheckBox.setSelected(Optional.ofNullable(AppProperties.getAddProjectToTrusted()).orElse(false));
         projectPath.setText(Optional.ofNullable(AppProperties.getProjectPath()).orElse(""));
@@ -363,14 +408,16 @@ public class Form extends JFrame {
         host.setText(Optional.ofNullable(AppProperties.getHost()).orElse(""));
         username.setText(Optional.ofNullable(AppProperties.getUsername()).orElse(""));
         password.setText(Optional.ofNullable(AppProperties.getPassword()).orElse(""));
-        launchIdeCheckBox.setSelected(Optional.ofNullable(AppProperties.getLaunchIde()).orElse(false));
+        launchIdeCheckBox.setSelected(Optional.ofNullable(AppProperties.getLaunchIde()).orElse(true));
         ideaExecutable.setText(Optional.ofNullable(AppProperties.getIdeaExecutable()).orElse(""));
     }
 
     private void persist() {
+        AppProperties.setSetupIdeSettings(setupIDESettingsCheckBox.isSelected());
         AppProperties.setIdeSettingsFolderPc(ideSettingsFolderPc.getText());
         AppProperties.setIdeSettingsFolderUsb(ideSettingsFolderUsb.getText());
         AppProperties.setTask(task.getSelectedIndex());
+        AppProperties.setSetupGit(setupGitCheckBox.isSelected());
         AppProperties.setGitExecutable(gitExecutable.getText());
         AppProperties.setAddProjectToTrusted(addProjectToTrustedCheckBox.isSelected());
         AppProperties.setProjectPath(projectPath.getText());
@@ -407,7 +454,6 @@ public class Form extends JFrame {
     };
 
 
-
     {
 // GUI initializer generated by IntelliJ IDEA GUI Designer
 // >>> IMPORTANT!! <<<
@@ -424,97 +470,97 @@ public class Form extends JFrame {
      */
     private void $$$setupUI$$$() {
         contentPane = new JPanel();
-        contentPane.setLayout(new GridLayoutManager(5, 4, new Insets(0, 0, 0, 0), -1, -1));
+        contentPane.setLayout(new GridLayoutManager(7, 4, new Insets(0, 0, 0, 0), -1, -1));
         contentPane.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         final Spacer spacer1 = new Spacer();
-        contentPane.add(spacer1, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        contentPane.add(spacer1, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         execute = new JButton();
         execute.setText("Execute");
-        contentPane.add(execute, new GridConstraints(4, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        contentPane.add(execute, new GridConstraints(6, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         cancel = new JButton();
         cancel.setText("Cancel");
-        contentPane.add(cancel, new GridConstraints(4, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        contentPane.add(cancel, new GridConstraints(6, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         launchIdeCheckBox = new JCheckBox();
         launchIdeCheckBox.setText("Launch IDE");
-        contentPane.add(launchIdeCheckBox, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JPanel panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        contentPane.add(panel1, new GridConstraints(1, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        panel1.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Git", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
-        final JPanel panel2 = new JPanel();
-        panel2.setLayout(new GridLayoutManager(9, 2, new Insets(0, 0, 0, 0), -1, -1));
-        panel1.add(panel2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        panel2.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(7, 7, 7, 7), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
+        contentPane.add(launchIdeCheckBox, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        gitPadding = new JPanel();
+        gitPadding.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        contentPane.add(gitPadding, new GridConstraints(3, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        gitPadding.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Git", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
+        gitPanel = new JPanel();
+        gitPanel.setLayout(new GridLayoutManager(9, 2, new Insets(0, 0, 0, 0), -1, -1));
+        gitPadding.add(gitPanel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        gitPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(7, 7, 7, 7), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         final JLabel label1 = new JLabel();
         label1.setText("Git executable:");
-        panel2.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        gitPanel.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer2 = new Spacer();
-        panel2.add(spacer2, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        gitPanel.add(spacer2, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         gitExecutable = new JTextField();
-        panel2.add(gitExecutable, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        gitPanel.add(gitExecutable, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         projectPathLbl = new JLabel();
         projectPathLbl.setText("Project path:");
-        panel2.add(projectPathLbl, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        gitPanel.add(projectPathLbl, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         projectPath = new JTextField();
         projectPath.setText("");
-        panel2.add(projectPath, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        gitPanel.add(projectPath, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         openCmd = new JButton();
         openCmd.setText("Open CMD");
-        panel2.add(openCmd, new GridConstraints(7, 1, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        gitPanel.add(openCmd, new GridConstraints(7, 1, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         addProjectToTrustedCheckBox = new JCheckBox();
         addProjectToTrustedCheckBox.setText("Add project to trusted");
-        panel2.add(addProjectToTrustedCheckBox, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        gitPanel.add(addProjectToTrustedCheckBox, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         setProxySettingsCheckBox = new JCheckBox();
         setProxySettingsCheckBox.setText("Set proxy settings");
-        panel2.add(setProxySettingsCheckBox, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        gitPanel.add(setProxySettingsCheckBox, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         hostLbl = new JLabel();
         hostLbl.setText("Host:");
-        panel2.add(hostLbl, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        gitPanel.add(hostLbl, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         usernameLbl = new JLabel();
         usernameLbl.setText("Username:");
-        panel2.add(usernameLbl, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        gitPanel.add(usernameLbl, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         passwordLbl = new JLabel();
         passwordLbl.setText("Password:");
-        panel2.add(passwordLbl, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        gitPanel.add(passwordLbl, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         host = new JTextField();
-        panel2.add(host, new GridConstraints(4, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        gitPanel.add(host, new GridConstraints(4, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         username = new JTextField();
-        panel2.add(username, new GridConstraints(5, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        gitPanel.add(username, new GridConstraints(5, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         password = new JPasswordField();
-        panel2.add(password, new GridConstraints(6, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        final JPanel panel3 = new JPanel();
-        panel3.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        contentPane.add(panel3, new GridConstraints(0, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        panel3.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Settings", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
-        final JPanel panel4 = new JPanel();
-        panel4.setLayout(new GridLayoutManager(4, 3, new Insets(0, 0, 0, 0), -1, -1));
-        panel3.add(panel4, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        panel4.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(7, 7, 7, 7), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
+        gitPanel.add(password, new GridConstraints(6, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        settingsPadding = new JPanel();
+        settingsPadding.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        contentPane.add(settingsPadding, new GridConstraints(1, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        settingsPadding.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Settings", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
+        settingsPanel = new JPanel();
+        settingsPanel.setLayout(new GridLayoutManager(4, 3, new Insets(0, 0, 0, 0), -1, -1));
+        settingsPadding.add(settingsPanel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        settingsPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(7, 7, 7, 7), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         final Spacer spacer3 = new Spacer();
-        panel4.add(spacer3, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        settingsPanel.add(spacer3, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         final JLabel label2 = new JLabel();
         label2.setText("IDE settings folder PC:");
-        panel4.add(label2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        settingsPanel.add(label2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         ideSettingsFolderPc = new JTextField();
-        panel4.add(ideSettingsFolderPc, new GridConstraints(0, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        settingsPanel.add(ideSettingsFolderPc, new GridConstraints(0, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final JLabel label3 = new JLabel();
         label3.setText("IDE settings folder USB:");
-        panel4.add(label3, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        settingsPanel.add(label3, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         ideSettingsFolderUsb = new JTextField();
-        panel4.add(ideSettingsFolderUsb, new GridConstraints(1, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        settingsPanel.add(ideSettingsFolderUsb, new GridConstraints(1, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final JLabel label4 = new JLabel();
         label4.setText("Task:");
-        panel4.add(label4, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        settingsPanel.add(label4, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         task = new JComboBox();
         final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
         defaultComboBoxModel1.addElement("Select a task");
         defaultComboBoxModel1.addElement("Refactor and copy from USB to PC");
         defaultComboBoxModel1.addElement("Refactor and copy from PC to USB");
         task.setModel(defaultComboBoxModel1);
-        panel4.add(task, new GridConstraints(2, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        settingsPanel.add(task, new GridConstraints(2, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         launchPadding = new JPanel();
         launchPadding.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        contentPane.add(launchPadding, new GridConstraints(3, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        contentPane.add(launchPadding, new GridConstraints(5, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         launchPadding.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Launch", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         launchPanel = new JPanel();
         launchPanel.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
@@ -529,7 +575,14 @@ public class Form extends JFrame {
         launchPanel.add(ideaExecutable, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         deleteLocalSettings = new JButton();
         deleteLocalSettings.setText("Delete local settings");
-        contentPane.add(deleteLocalSettings, new GridConstraints(4, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        contentPane.add(deleteLocalSettings, new GridConstraints(6, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        setupGitCheckBox = new JCheckBox();
+        setupGitCheckBox.setSelected(false);
+        setupGitCheckBox.setText("Setup git");
+        contentPane.add(setupGitCheckBox, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        setupIDESettingsCheckBox = new JCheckBox();
+        setupIDESettingsCheckBox.setText("Setup IDE settings");
+        contentPane.add(setupIDESettingsCheckBox, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**
