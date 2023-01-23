@@ -6,7 +6,7 @@ Portable utility standalone for IntelliJ IDEA
 This is a utility to set up a minimal programming environment to work with InteliJ IDEA even on a USB stick.
 
 This utility has 2 main functions:
-- Set intellij settings
+- Set IntelliJ settings
 - Set up git
 
 The program copies the settings from the USB stick to the user folder.
@@ -25,6 +25,11 @@ Finally, it is possible to start IntelliJ directly by providing the path to idea
 
 Download `IntelliJPortableUtility.exe` and place it on a USB drive.
 To run the utility simply double click on the exe file.
+
+## Get started
+
+For the first time you have to run IntelliJ as you normally do. Now set the JDK, git path and all the rest.
+Once done, close IntelliJ and launch the utility. Enable the Settings module and set the paths appropriately. Select as task `Refactor and copy from PC to USB` and click on execute.
 
 ## Usage
 
@@ -61,6 +66,8 @@ Module that takes care of setting some basic git settings.
 Module that automates the opening of IntelliJ.
 
 - IDEA executable: path to `idea64.exe`
+
+***NOTE***: Starting IntelliJ from the utility limits ram usage to that set for the utility's JVM. For this reason IntelliJ may seem slower than usual. To fix this simply close the utility when done successfully.
 
 ## Other
 
