@@ -1,5 +1,6 @@
 package it.brian.utility;
 
+import com.ezware.dialog.task.TaskDialogs;
 import com.formdev.flatlaf.themes.FlatMacDarkLaf;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -13,7 +14,7 @@ public class Main {
         FlatMacDarkLaf.setup();
         UIManager.put("PasswordField.showRevealButton", true);
         Form form = new Form();
-
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> TaskDialogs.showException(e));
     }
 
 

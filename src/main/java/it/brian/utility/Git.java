@@ -14,9 +14,10 @@ public class Git {
     }
 
     public void addProjectToTrusted(String path) {
+        path = path.replace("\\", "/");
         logger.info("Adding project to trusted");
         try {
-            Process process = new ProcessBuilder(gitExePath, "config",  "--global", "--add", "safe.directory", path).start();
+            Process process = new ProcessBuilder(gitExePath, "config", "--global", "--add", "safe.directory", path).start();
             logger.debug(process.info());
         } catch (IOException e) {
             logger.error("Failed to add project to trusted");
