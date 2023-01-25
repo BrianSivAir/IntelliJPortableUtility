@@ -15,6 +15,8 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -102,6 +104,33 @@ public class Form extends JFrame {
         execute.addActionListener(e -> {
             //VALIDATION
             if (validateThis()) {
+
+                String errorMessage = null;
+                if (task.getSelectedIndex() == 1) { // USB to PC
+                    File file = new File(ideSettingsFolderUsb.getText());
+                    try {
+                        file.createNewFile();
+                    } catch (IOException ex) {
+                        errorMessage =  "Cannot create file with path: " + file.getPath();
+                    }
+                } else if (task.getSelectedIndex() == 1) { // PC to USB
+                    File file = new File(ideSettingsFolderPc.getText());
+                    try {
+                        file.createNewFile();
+                    } catch (IOException ex) {
+                        errorMessage =  "Cannot create file with path: " + file.getPath();
+                    }
+                }
+
+                if (errorMessage != null) {
+                    JOptionPane.showMessageDialog(
+                            SwingUtilities.windowForComponent(Form.this),
+                            errorMessage,
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                }
+
                 //PERSISTENCE
                 persist();
                 //EXECUTION
@@ -156,28 +185,35 @@ public class Form extends JFrame {
                         SwingUtilities.windowForComponent(Form.this),
                         "Invalid git executable",
                         "Error",
-                        JOptionPane.ERROR_MESSAGE,
-                        UIManager.getIcon("OptionPane.errorIcon")
+                        JOptionPane.ERROR_MESSAGE
                 );
             }
         });
 
 
         deleteLocalSettings.addActionListener(e -> {
-            if (Util.deleteLocalSettings(ideSettingsFolderPc.getText())) {
-                JOptionPane.showMessageDialog(
-                        SwingUtilities.windowForComponent(Form.this),
-                        "Local IDE settings deleted successfully",
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE
-                );
-            } else {
-                JOptionPane.showMessageDialog(
-                        SwingUtilities.windowForComponent(Form.this),
-                        "Failed to delete local IDE settings",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE
-                );
+            int delete = JOptionPane.showConfirmDialog(
+                    SwingUtilities.windowForComponent(Form.this),
+                    "Are you sure that you want to delete the folder \"%s\"?".formatted(ideSettingsFolderPc.getText()),
+                    "Error",
+                    JOptionPane.YES_NO_OPTION
+            );
+            if (delete == JOptionPane.YES_OPTION) {
+                if (Util.deleteLocalSettings(ideSettingsFolderPc.getText())) {
+                    JOptionPane.showMessageDialog(
+                            SwingUtilities.windowForComponent(Form.this),
+                            "Local IDE settings deleted successfully",
+                            "Success",
+                            JOptionPane.INFORMATION_MESSAGE
+                    );
+                } else {
+                    JOptionPane.showMessageDialog(
+                            SwingUtilities.windowForComponent(Form.this),
+                            "Failed to delete local IDE settings",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                }
             }
         });
     }
@@ -384,14 +420,17 @@ public class Form extends JFrame {
             return true;
         }
 
+
         String message = invalidComponents.get(firstKey);
+
+        firstKey.setToolTipText(message);
+        firstKey.putClientProperty("JComponent.outline", "error");
 
         JOptionPane.showMessageDialog(
                 SwingUtilities.windowForComponent(Form.this),
                 message,
                 "Error",
-                JOptionPane.ERROR_MESSAGE,
-                UIManager.getIcon("OptionPane.errorIcon")
+                JOptionPane.ERROR_MESSAGE
         );
         return false;
     }

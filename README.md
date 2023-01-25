@@ -3,7 +3,7 @@ Portable utility standalone for IntelliJ IDEA
 
 ## Overview
 
-This is a utility to set up a minimal programming environment to work with InteliJ IDEA even on a USB stick.
+This is a utility to set up a minimal programming environment to work with IntelliJ IDEA even on a USB stick.
 
 This utility has 2 main functions:
 - Set IntelliJ settings
@@ -24,7 +24,7 @@ Finally, it is possible to start IntelliJ directly by providing the path to idea
 ## Installation
 
 Download `IntelliJPortableUtility.exe` and place it on a USB drive.
-To run the utility simply double click on the exe file.
+To run the utility simply double-click on the exe file.
 
 ## Get started
 
@@ -43,7 +43,8 @@ Each of these sections can be enabled or disabled as needed.
 ### Settings
 This module takes care of copying the IntelliJ settings and doing the refactoring.
 - IDE settings folder PC: path to the folder containing the JetBrains tool settings on the local PC.
-By default this field is set to `C:\Users\<user>\AppData\Roaming\JetBrains`.
+By default, this field is set to `C:\Users\<user>\AppData\Roaming\JetBrains`.
+However, it is appropriate to change it in order to point to the folder containing the IntelliJ settings. Example: ```IdeaIC2022.3```.
 If the folder doesn't exist, it tries to create it.
 If it cannot be created, a runtime exception will be thrown.
 - IDE settings folder USB: path to the folder containing the IntelliJ settings located on the usb key.

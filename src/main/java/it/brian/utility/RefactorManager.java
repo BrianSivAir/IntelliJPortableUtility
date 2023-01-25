@@ -28,11 +28,6 @@ public class RefactorManager {
     }
 
     public void loadSettings(String path) {
-        try {
-            new File(path).createNewFile();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
         defaultDispatcher(path, Operation.LOAD);
     }
 

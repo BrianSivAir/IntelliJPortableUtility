@@ -159,8 +159,9 @@ public class AppProperties {
                 logger.error("Failed to load data from properties file");
                 throw new RuntimeException(e);
             }
+        } else {
+            logger.info("No user settings found");
         }
-        logger.info("No user settings found");
     }
 
     public static void store() {

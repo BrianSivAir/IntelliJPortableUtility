@@ -21,7 +21,7 @@ public class CopyManager {
     public void copyPcToUsb() {
         logger.info("Copying settings PC -> USB");
         try {
-            FileUtils.copyDirectory(ideSettingsFolderPcFile, ideSettingsFolderUsbFile.getParentFile());
+            FileUtils.copyDirectory(ideSettingsFolderPcFile, ideSettingsFolderUsbFile);
         } catch (IOException e) {
             logger.error("Failed to copy directory");
             throw new RuntimeException(e);
@@ -31,7 +31,7 @@ public class CopyManager {
     public void copyUsbToPc() {
         logger.info("Copying settings USB -> PC");
         try {
-            FileUtils.copyDirectory(ideSettingsFolderUsbFile, ideSettingsFolderPcFile.getParentFile());
+            FileUtils.copyDirectory(ideSettingsFolderUsbFile, ideSettingsFolderPcFile);
         } catch (IOException e) {
             logger.error("Failed to copy directory");
             throw new RuntimeException(e);

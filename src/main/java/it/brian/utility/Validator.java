@@ -8,6 +8,9 @@ import java.util.regex.Pattern;
 
 public class Validator {
     public static boolean isValidIdeSettingsFolderPc(String ideSettingsFolderPc) {
+        if ("".equals(ideSettingsFolderPc)) {
+            return false;
+        }
         try {
             Paths.get(ideSettingsFolderPc);
         } catch (Exception e) {
@@ -16,11 +19,19 @@ public class Validator {
         return true;
     }
     public static boolean isValidIdeSettingsFolderUsb(String ideSettingsFolderUsb) {
-        return new File(ideSettingsFolderUsb).isDirectory();
+        if ("".equals(ideSettingsFolderUsb)) {
+            return false;
+        }
+        try {
+            Paths.get(ideSettingsFolderUsb);
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
     }
 
     public static boolean isValidTask(int task) {
-        return 0 < task && task < 4;
+        return 0 < task && task < 3;
     }
 
     public static boolean isValidGitExecutable(String gitExecutable) {
