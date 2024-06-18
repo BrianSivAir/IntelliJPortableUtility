@@ -1,6 +1,8 @@
 # IntelliJPortableUtility
 Portable utility standalone for IntelliJ IDEA
 
+<img src="images/screenshot.png" width="200"/>
+
 ## Overview
 
 This is a utility to set up a minimal programming environment to work with IntelliJ IDEA even on a USB stick.

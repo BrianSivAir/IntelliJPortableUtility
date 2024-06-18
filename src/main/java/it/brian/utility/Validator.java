@@ -18,6 +18,7 @@ public class Validator {
         }
         return true;
     }
+
     public static boolean isValidIdeSettingsFolderUsb(String ideSettingsFolderUsb) {
         if ("".equals(ideSettingsFolderUsb)) {
             return false;
@@ -54,8 +55,14 @@ public class Validator {
     public static boolean isValidPassword(String password) {
         return password.trim().length() > 0;
     }
+
     public static boolean isValidIdeaExecutable(String ideaExecutable) {
         File file = new File(ideaExecutable);
         return file.isFile() && "exe".equals(FilenameUtils.getExtension(file.getName()));
     }
+
+    public static boolean isValidScriptPath(String scriptPath) {
+        return new File(scriptPath).isFile();
+    }
+
 }

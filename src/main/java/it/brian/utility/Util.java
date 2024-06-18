@@ -29,9 +29,20 @@ public class Util {
         try {
             FileUtils.deleteDirectory(new File(localSettingsFolder));
             return true;
-        } catch (IOException e) {
+        } catch (IllegalArgumentException | IOException e) {
             return false;
         }
 
+    }
+
+    public static void invokeScript(String scriptPath) {
+        logger.info("Invoking script");
+        try {
+            Process process = new ProcessBuilder(scriptPath).start();
+            logger.debug(process.info());
+        } catch (IOException e) {
+            logger.error("Failed to launch Script: " + scriptPath);
+            throw new RuntimeException(e);
+        }
     }
 }

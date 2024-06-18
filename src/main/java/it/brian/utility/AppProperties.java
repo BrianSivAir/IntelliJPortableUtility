@@ -29,6 +29,8 @@ public class AppProperties {
     private static final String PASSWORD = "git.proxy.password";
     private static final String LAUNCH_IDE = "app.launchide";
     private static final String IDEA_EXECUTABLE = "ide.executable";
+    private static final String INVOKE_SCRIPT = "script";
+    private static final String SCRIPT_PATH = "script.path";
 
 
     public static void setSetupIdeSettings(Boolean setupIdeSettings) {
@@ -148,6 +150,23 @@ public class AppProperties {
 
     public static String getIdeaExecutable() {
         return properties.getProperty(IDEA_EXECUTABLE);
+    }
+
+    public static void setInvokeScript(boolean invokeScript) {
+        properties.setProperty(INVOKE_SCRIPT, String.valueOf(invokeScript));
+    }
+
+    public static Boolean getInvokeScript() {
+        String invokeScript = properties.getProperty(INVOKE_SCRIPT);
+        return invokeScript == null ? null : Boolean.parseBoolean(invokeScript);
+    }
+
+    public static void setScriptPath(String scriptPath) {
+        properties.setProperty(SCRIPT_PATH, scriptPath);
+    }
+
+    public static String getScriptPath() {
+        return properties.getProperty(SCRIPT_PATH);
     }
 
     public static void load() {

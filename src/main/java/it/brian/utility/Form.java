@@ -53,11 +53,16 @@ public class Form extends JFrame {
     private JPanel settingsPanel;
     private JPanel gitPadding;
     private JPanel gitPanel;
+    private JCheckBox invokeScriptCheckBox;
+    private JTextField scriptPath;
+    private JLabel scriptPathLbl;
+    private JButton invokeScript;
     private JButton browseIdeSettingsFolderPc = new JButton();
     private JButton browseIdeSettingsFolderUsb = new JButton();
     private JButton browseProjectPath = new JButton();
     private JButton browseGitExecutable = new JButton();
     private JButton browseIdeaExecutable = new JButton();
+    private JButton browseScriptPath = new JButton();
 
     private void init() {
         setContentPane(contentPane);
@@ -86,6 +91,7 @@ public class Form extends JFrame {
         username.addFocusListener(realTimeValidator);
         password.addFocusListener(realTimeValidator);
         ideaExecutable.addFocusListener(realTimeValidator);
+        scriptPath.addFocusListener(realTimeValidator);
     }
 
     public Form() {
@@ -100,6 +106,7 @@ public class Form extends JFrame {
         addProjectToTrustedCheckBox.addActionListener(e -> refreshAllCheckBox());
         setProxySettingsCheckBox.addActionListener(e -> refreshAllCheckBox());
         launchIdeCheckBox.addActionListener(e -> refreshAllCheckBox());
+        invokeScriptCheckBox.addActionListener(e -> refreshAllCheckBox());
 
         execute.addActionListener(e -> {
             //VALIDATION
@@ -111,14 +118,14 @@ public class Form extends JFrame {
                     try {
                         file.createNewFile();
                     } catch (IOException ex) {
-                        errorMessage =  "Cannot create file with path: " + file.getPath();
+                        errorMessage = "Cannot create file with path: " + file.getPath();
                     }
-                } else if (task.getSelectedIndex() == 1) { // PC to USB
+                } else if (task.getSelectedIndex() == 2) { // PC to USB
                     File file = new File(ideSettingsFolderPc.getText());
                     try {
                         file.createNewFile();
                     } catch (IOException ex) {
-                        errorMessage =  "Cannot create file with path: " + file.getPath();
+                        errorMessage = "Cannot create file with path: " + file.getPath();
                     }
                 }
 
@@ -216,6 +223,19 @@ public class Form extends JFrame {
                 }
             }
         });
+
+        invokeScript.addActionListener(e -> {
+            if (!Validator.isValidScriptPath(scriptPath.getText())) {
+                JOptionPane.showMessageDialog(
+                        SwingUtilities.windowForComponent(Form.this),
+                        "Invalid script path",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+            Util.invokeScript(scriptPath.getText());
+        });
     }
 
     private void configureBrowseButtons() {
@@ -270,6 +290,16 @@ public class Form extends JFrame {
         });
         browseGitExecutable.setIcon(UIManager.getIcon("Tree.closedIcon"));
         gitExecutable.putClientProperty(FlatClientProperties.TEXT_FIELD_TRAILING_COMPONENT, browseGitExecutable);
+
+        browseScriptPath.addActionListener(e -> {
+            JFileChooser jFileChooser = new JFileChooser();
+            jFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            if (jFileChooser.showDialog(this, null) == JFileChooser.APPROVE_OPTION) {
+                scriptPath.setText(jFileChooser.getSelectedFile().getAbsolutePath());
+            }
+        });
+        browseScriptPath.setIcon(UIManager.getIcon("Tree.closedIcon"));
+        scriptPath.putClientProperty(FlatClientProperties.TEXT_FIELD_TRAILING_COMPONENT, browseScriptPath);
     }
 
     private void autoReplaceDriveInPaths() {
@@ -298,6 +328,13 @@ public class Form extends JFrame {
             if (ideaExecutable.getText().length() > 0) {
                 drivesList.add(ideaExecutable.getText().charAt(0));
                 ts.add(ideaExecutable);
+            }
+        }
+
+        if (invokeScriptCheckBox.isSelected()) {
+            if (scriptPath.getText().length() > 0) {
+                drivesList.add(scriptPath.getText().charAt(0));
+                ts.add(scriptPath);
             }
         }
 
@@ -364,6 +401,16 @@ public class Form extends JFrame {
         } else {
             launchPadding.setVisible(false);
         }
+
+        if (invokeScriptCheckBox.isSelected()) {
+            scriptPathLbl.setVisible(true);
+            scriptPath.setVisible(true);
+            invokeScript.setVisible(true);
+        } else {
+            scriptPathLbl.setVisible(false);
+            scriptPath.setVisible(false);
+            invokeScript.setVisible(false);
+        }
     }
 
     private LinkedMap<JComponent, String> getInvalidComponents() {
@@ -406,6 +453,13 @@ public class Form extends JFrame {
                 invalidComponents.put(ideaExecutable, "Invalid IDEA executable");
             }
         }
+
+        if (invokeScriptCheckBox.isSelected()) {
+            if (!Validator.isValidScriptPath(scriptPath.getText())) {
+                invalidComponents.put(scriptPath, "Invalid script path");
+            }
+        }
+
         return invalidComponents;
     }
 
@@ -451,6 +505,8 @@ public class Form extends JFrame {
         password.setText(Optional.ofNullable(AppProperties.getPassword()).orElse(""));
         launchIdeCheckBox.setSelected(Optional.ofNullable(AppProperties.getLaunchIde()).orElse(true));
         ideaExecutable.setText(Optional.ofNullable(AppProperties.getIdeaExecutable()).orElse(""));
+        invokeScriptCheckBox.setSelected(Optional.ofNullable(AppProperties.getInvokeScript()).orElse(false));
+        scriptPath.setText(Optional.ofNullable(AppProperties.getScriptPath()).orElse(""));
     }
 
     private void persist() {
@@ -468,6 +524,8 @@ public class Form extends JFrame {
         AppProperties.setPassword(password.getText());
         AppProperties.setLaunchIde(launchIdeCheckBox.isSelected());
         AppProperties.setIdeaExecutable(ideaExecutable.getText());
+        AppProperties.setInvokeScript(invokeScriptCheckBox.isSelected());
+        AppProperties.setScriptPath(scriptPath.getText());
         AppProperties.store();
     }
 
@@ -604,16 +662,27 @@ public class Form extends JFrame {
         contentPane.add(launchPadding, new GridConstraints(5, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         launchPadding.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Launch", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         launchPanel = new JPanel();
-        launchPanel.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
+        launchPanel.setLayout(new GridLayoutManager(5, 2, new Insets(0, 0, 0, 0), -1, -1));
         launchPadding.add(launchPanel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         launchPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(7, 7, 7, 7), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         final JLabel label5 = new JLabel();
         label5.setText("IDEA executable:");
         launchPanel.add(label5, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer4 = new Spacer();
-        launchPanel.add(spacer4, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        launchPanel.add(spacer4, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         ideaExecutable = new JTextField();
         launchPanel.add(ideaExecutable, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        invokeScriptCheckBox = new JCheckBox();
+        invokeScriptCheckBox.setText("Invoke script");
+        launchPanel.add(invokeScriptCheckBox, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        scriptPathLbl = new JLabel();
+        scriptPathLbl.setText("Script path:");
+        launchPanel.add(scriptPathLbl, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        scriptPath = new JTextField();
+        launchPanel.add(scriptPath, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        invokeScript = new JButton();
+        invokeScript.setText("Invoke");
+        launchPanel.add(invokeScript, new GridConstraints(3, 1, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         deleteLocalSettings = new JButton();
         deleteLocalSettings.setText("Delete local settings");
         contentPane.add(deleteLocalSettings, new GridConstraints(6, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
